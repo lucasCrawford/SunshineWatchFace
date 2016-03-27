@@ -34,6 +34,7 @@ import android.text.format.Time;
 import android.util.Log;
 import android.view.SurfaceHolder;
 
+import com.example.hercules.wearable.utils.Constants;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 
@@ -106,6 +107,14 @@ public class WeatherWatchFace extends CanvasWatchFaceService{
                 mTime.setToNow();
             }
         };
+
+        final WeatherUpdateReceiver mWeatherUpdateReceiver = new WeatherUpdateReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                Log.d(TAG, "Received weather update!");
+            }
+        };
+
         int mTapCount;
 
         /**
@@ -264,9 +273,15 @@ public class WeatherWatchFace extends CanvasWatchFaceService{
             if (mRegisteredTimeZoneReceiver) {
                 return;
             }
+
+            /* Register the time zone reciever */
             mRegisteredTimeZoneReceiver = true;
             IntentFilter filter = new IntentFilter(Intent.ACTION_TIMEZONE_CHANGED);
             WeatherWatchFace.this.registerReceiver(mTimeZoneReceiver, filter);
+
+            /* Register the update receiver */
+            IntentFilter weatherFilter = new IntentFilter(Constants.WEATHER_UPDATE);
+            WeatherWatchFace.this.registerReceiver(mWeatherUpdateReceiver, weatherFilter);
         }
 
         private void unregisterReceiver() {
@@ -275,6 +290,7 @@ public class WeatherWatchFace extends CanvasWatchFaceService{
             }
             mRegisteredTimeZoneReceiver = false;
             WeatherWatchFace.this.unregisterReceiver(mTimeZoneReceiver);
+            WeatherWatchFace.this.unregisterReceiver(mWeatherUpdateReceiver);
         }
 
         /**
@@ -308,5 +324,11 @@ public class WeatherWatchFace extends CanvasWatchFaceService{
                 mUpdateTimeHandler.sendEmptyMessageDelayed(MSG_UPDATE_TIME, delayMs);
             }
         }
+    }
+
+    public abstract class WeatherUpdateReceiver extends BroadcastReceiver{
+
+        @Override
+        public abstract void onReceive(Context context, Intent intent);
     }
 }

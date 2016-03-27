@@ -1,5 +1,8 @@
 package com.example.hercules.wearable.services;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
 import android.util.Log;
 
 import com.example.hercules.wearable.utils.Constants;
@@ -30,8 +33,16 @@ public class WeatherUpdateService extends WearableListenerService {
                 if(path.equals(Constants.PATH)){
                     String value = dataMap.getString(Constants.DATA_VALUE);
                     Log.e(TAG, "Value: " + value);
+                    sendWeatherUpdateBroadcast(value);
                 }
           }
         }
+    }
+
+    private void sendWeatherUpdateBroadcast(String value){
+        Intent intent = new Intent();
+        intent.putExtra(Constants.PATH, value);
+        intent.setAction(Constants.WEATHER_UPDATE);
+        sendBroadcast(intent);
     }
 }

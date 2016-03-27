@@ -238,7 +238,7 @@ public class MainActivity extends AppCompatActivity implements
 
     }
 
-    public void sendDemoData(){
+    public void sendDemoData(View v){
         Log.d(TAG, "Sending demo data!");
         PutDataMapRequest putDataMapRequest = PutDataMapRequest.create("/demo-path");
 
@@ -257,4 +257,6 @@ public class MainActivity extends AppCompatActivity implements
                     }
                 });
     }
+
+
 }
