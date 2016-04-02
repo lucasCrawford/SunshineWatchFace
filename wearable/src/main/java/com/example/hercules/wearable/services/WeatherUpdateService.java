@@ -1,7 +1,5 @@
 package com.example.hercules.wearable.services;
 
-import android.content.BroadcastReceiver;
-import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
 
@@ -20,6 +18,13 @@ public class WeatherUpdateService extends WearableListenerService {
 
     private static final String TAG = "WeatherUpdateService";
 
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        Log.e(TAG, "Create.");
+    }
+
     @Override
     public void onDataChanged(DataEventBuffer dataEvents){
         Log.e(TAG, "HERE!");
@@ -31,17 +36,17 @@ public class WeatherUpdateService extends WearableListenerService {
                 DataMap dataMap = DataMapItem.fromDataItem(dataItem).getDataMap();
                 String path = dataItem.getUri().getPath();
                 if(path.equals(Constants.PATH)){
-                    String value = dataMap.getString(Constants.DATA_VALUE);
-                    Log.e(TAG, "Value: " + value);
-                    sendWeatherUpdateBroadcast(value);
+                    Log.e(TAG, "High: " + dataMap.getDouble(Constants.DATA_HIGH_TEMP));
+                    sendWeatherUpdateBroadcast(dataMap.getDouble(Constants.DATA_HIGH_TEMP), dataMap.getDouble(Constants.DATA_LOW_TEMP));
                 }
           }
         }
     }
 
-    private void sendWeatherUpdateBroadcast(String value){
+    private void sendWeatherUpdateBroadcast(Double high, Double low){
         Intent intent = new Intent();
-        intent.putExtra(Constants.PATH, value);
+        intent.putExtra(Constants.DATA_HIGH_TEMP, high);
+        intent.putExtra(Constants.DATA_LOW_TEMP, low);
         intent.setAction(Constants.WEATHER_UPDATE);
         sendBroadcast(intent);
     }

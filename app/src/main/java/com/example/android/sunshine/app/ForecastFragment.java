@@ -47,11 +47,23 @@ import android.widget.TextView;
 
 import com.example.android.sunshine.app.data.WeatherContract;
 import com.example.android.sunshine.app.sync.SunshineSyncAdapter;
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.ResultCallback;
+import com.google.android.gms.wearable.DataApi;
+import com.google.android.gms.wearable.DataMap;
+import com.google.android.gms.wearable.PutDataMapRequest;
+import com.google.android.gms.wearable.PutDataRequest;
+import com.google.android.gms.wearable.Wearable;
 
 /**
  * Encapsulates fetching the forecast and displaying it as a {@link android.support.v7.widget.RecyclerView} layout.
  */
-public class ForecastFragment extends Fragment implements LoaderManager.LoaderCallbacks<Cursor>, SharedPreferences.OnSharedPreferenceChangeListener {
+public class ForecastFragment extends Fragment implements
+        LoaderManager.LoaderCallbacks<Cursor>,
+        SharedPreferences.OnSharedPreferenceChangeListener,
+        GoogleApiClient.ConnectionCallbacks,
+        GoogleApiClient.OnConnectionFailedListener{
     public static final String LOG_TAG = ForecastFragment.class.getSimpleName();
     private ForecastAdapter mForecastAdapter;
     private RecyclerView mRecyclerView;
@@ -59,6 +71,9 @@ public class ForecastFragment extends Fragment implements LoaderManager.LoaderCa
     private int mChoiceMode;
     private boolean mHoldForTransition;
     private long mInitialSelectedDate = -1;
+    private GoogleApiClient mGoogleApiClient;
+
+    private static final String TAG = "ForecastFragment";
 
     private static final String SELECTED_KEY = "selected_position";
 
@@ -115,6 +130,19 @@ public class ForecastFragment extends Fragment implements LoaderManager.LoaderCa
         super.onCreate(savedInstanceState);
         // Add this line in order for this fragment to handle menu events.
         setHasOptionsMenu(true);
+
+        /* Initialize the Google Api client */
+        initApiClient();
+    }
+
+
+    private void initApiClient(){
+        mGoogleApiClient = new GoogleApiClient.Builder(getActivity())
+                .addApi(Wearable.API)
+                .addConnectionCallbacks(this)
+                .addOnConnectionFailedListener(this)
+                .build();
+        mGoogleApiClient.connect();
     }
 
     @Override
@@ -339,6 +367,7 @@ public class ForecastFragment extends Fragment implements LoaderManager.LoaderCa
                     if (mRecyclerView.getChildCount() > 0) {
                         mRecyclerView.getViewTreeObserver().removeOnPreDrawListener(this);
                         int position = mForecastAdapter.getSelectedItemPosition();
+                        sendWeatherData(25.0, 12.0);
                         if (position == RecyclerView.NO_POSITION &&
                                 -1 != mInitialSelectedDate) {
                             Cursor data = mForecastAdapter.getCursor();
@@ -374,6 +403,7 @@ public class ForecastFragment extends Fragment implements LoaderManager.LoaderCa
 
 
 
+
     @Override
     public void onDestroy() {
         super.onDestroy();
@@ -396,6 +426,41 @@ public class ForecastFragment extends Fragment implements LoaderManager.LoaderCa
 
     public void setInitialSelectedDate(long initialSelectedDate) {
         mInitialSelectedDate = initialSelectedDate;
+    }
+
+    @Override
+    public void onConnected(Bundle bundle) {
+        Log.d(TAG, "Connected to GPS!");
+    }
+
+    @Override
+    public void onConnectionSuspended(int i) {
+        Log.d(TAG, "Connection suspended...!");
+    }
+
+    @Override
+    public void onConnectionFailed(ConnectionResult connectionResult) {
+        Log.d(TAG, "Connection failed");
+    }
+
+    public void sendWeatherData(Double high, Double low){
+        Log.d(TAG, "Sending demo data!");
+        PutDataMapRequest putDataMapRequest = PutDataMapRequest.create(Constants.PATH);
+
+        DataMap map = putDataMapRequest.getDataMap();
+        map.putLong("timestamp", System.currentTimeMillis());
+        map.putLong(Constants.DATA_DATE, System.currentTimeMillis());
+        map.putDouble(Constants.DATA_HIGH_TEMP, high);
+        map.putDouble(Constants.DATA_LOW_TEMP, low);
+
+        PutDataRequest request = putDataMapRequest.asPutDataRequest();
+        Wearable.DataApi.putDataItem(mGoogleApiClient, request)
+                .setResultCallback(new ResultCallback<DataApi.DataItemResult>() {
+                    @Override
+                    public void onResult(DataApi.DataItemResult dataItemResult) {
+                        Log.d(TAG, "Result: " + dataItemResult);
+                    }
+                });
     }
 
     /*

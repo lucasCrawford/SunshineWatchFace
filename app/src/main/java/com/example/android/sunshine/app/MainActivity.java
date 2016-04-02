@@ -40,14 +40,12 @@ import com.google.android.gms.common.api.ResolvingResultCallbacks;
 import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.common.api.Status;
 import com.google.android.gms.wearable.DataApi;
+import com.google.android.gms.wearable.DataMap;
 import com.google.android.gms.wearable.PutDataMapRequest;
 import com.google.android.gms.wearable.PutDataRequest;
 import com.google.android.gms.wearable.Wearable;
 
-public class MainActivity extends AppCompatActivity implements
-        ForecastFragment.Callback,
-        GoogleApiClient.ConnectionCallbacks,
-        GoogleApiClient.OnConnectionFailedListener{
+public class MainActivity extends AppCompatActivity implements ForecastFragment.Callback{
 
     private final String LOG_TAG = MainActivity.class.getSimpleName();
     private static final String DETAILFRAGMENT_TAG = "DFTAG";
@@ -57,7 +55,6 @@ public class MainActivity extends AppCompatActivity implements
     private boolean mTwoPane;
     private String mLocation;
 
-    private GoogleApiClient mGoogleApiClient;
     private static final String TAG = "DEMO_SERVICE";
 
     @Override
@@ -121,18 +118,6 @@ public class MainActivity extends AppCompatActivity implements
                 startService(intent);
             }
         }
-
-        /* Initialize the Google Api client */
-        initApiClient();
-    }
-
-    private void initApiClient(){
-        mGoogleApiClient = new GoogleApiClient.Builder(this)
-                .addApi(Wearable.API)
-                .addConnectionCallbacks(this)
-                .addOnConnectionFailedListener(this)
-                .build();
-        mGoogleApiClient.connect();
     }
 
     @Override
@@ -223,40 +208,8 @@ public class MainActivity extends AppCompatActivity implements
         return true;
     }
 
-    @Override
-    public void onConnected(Bundle bundle) {
 
-    }
 
-    @Override
-    public void onConnectionSuspended(int i) {
-
-    }
-
-    @Override
-    public void onConnectionFailed(ConnectionResult connectionResult) {
-
-    }
-
-    public void sendDemoData(View v){
-        Log.d(TAG, "Sending demo data!");
-        PutDataMapRequest putDataMapRequest = PutDataMapRequest.create("/demo-path");
-
-        putDataMapRequest.getDataMap().putString("demo-value", "Hello, World!");
-
-        PutDataRequest request = putDataMapRequest.asPutDataRequest();
-        Wearable.DataApi.putDataItem(mGoogleApiClient, request)
-                .setResultCallback(new ResultCallback<DataApi.DataItemResult>() {
-                    @Override
-                    public void onResult(DataApi.DataItemResult dataItemResult) {
-                        if(!dataItemResult.getStatus().isSuccess()){
-                            Log.e(TAG, "Failure! The request was NOT received. ");
-                        }else{
-                            Log.d(TAG, "Success!! The request was received. ");
-                        }
-                    }
-                });
-    }
 
 
 }

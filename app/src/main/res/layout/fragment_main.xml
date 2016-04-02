@@ -73,12 +73,6 @@
         android:paddingTop="@dimen/activity_vertical_margin"
         android:text="@string/empty_forecast_list" />
 
-    <Button
-        android:id="@+id/demoButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Test now!"
-        android:onClick="sendDemoData"/>
 </android.support.design.widget.CoordinatorLayout>
 
 </FrameLayout>
