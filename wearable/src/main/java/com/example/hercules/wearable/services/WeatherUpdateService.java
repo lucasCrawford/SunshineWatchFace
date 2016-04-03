@@ -35,15 +35,17 @@ public class WeatherUpdateService extends WearableListenerService {
                 DataItem dataItem = dataEvent.getDataItem();
                 DataMap dataMap = DataMapItem.fromDataItem(dataItem).getDataMap();
                 String path = dataItem.getUri().getPath();
+
+                /* If the path of the data event is for a weather update, send broadcast */
                 if(path.equals(Constants.PATH)){
-                    Log.e(TAG, "High: " + dataMap.getDouble(Constants.DATA_HIGH_TEMP));
-                    sendWeatherUpdateBroadcast(dataMap.getDouble(Constants.DATA_HIGH_TEMP), dataMap.getDouble(Constants.DATA_LOW_TEMP));
+                    sendWeatherUpdateBroadcast(dataMap.getFloat(Constants.DATA_HIGH_TEMP), dataMap.getFloat(Constants.DATA_LOW_TEMP));
                 }
           }
         }
     }
 
-    private void sendWeatherUpdateBroadcast(Double high, Double low){
+    /* Update the watch face with the weather update details */
+    private void sendWeatherUpdateBroadcast(Float high, Float low){
         Intent intent = new Intent();
         intent.putExtra(Constants.DATA_HIGH_TEMP, high);
         intent.putExtra(Constants.DATA_LOW_TEMP, low);

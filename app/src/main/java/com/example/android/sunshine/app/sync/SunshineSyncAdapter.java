@@ -49,6 +49,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.Date;
 import java.util.Vector;
 import java.util.concurrent.ExecutionException;
 
@@ -62,7 +63,7 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter {
     public static final int SYNC_FLEXTIME = SYNC_INTERVAL/3;
     private static final long DAY_IN_MILLIS = 1000 * 60 * 60 * 24;
     private static final int WEATHER_NOTIFICATION_ID = 3004;
-
+    private static final String TAG = "SunshineSyncAdapter";
 
     private static final String[] NOTIFY_WEATHER_PROJECTION = new String[] {
             WeatherContract.WeatherEntry.COLUMN_WEATHER_ID,
@@ -359,6 +360,8 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter {
             if ( cVVector.size() > 0 ) {
                 ContentValues[] cvArray = new ContentValues[cVVector.size()];
                 cVVector.toArray(cvArray);
+                ContentValues todaysContent = cVVector.get(0);
+                sendDataToWatchface(todaysContent);
                 getContext().getContentResolver().bulkInsert(WeatherContract.WeatherEntry.CONTENT_URI, cvArray);
 
                 // delete old data so we don't build up an endless history
@@ -378,6 +381,14 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter {
             e.printStackTrace();
             setLocationStatus(getContext(), LOCATION_STATUS_SERVER_INVALID);
         }
+    }
+
+    private void sendDataToWatchface(ContentValues todaysContent){
+        Log.d(TAG, "Sending data!");
+        Long date = todaysContent.getAsLong(WeatherContract.WeatherEntry.COLUMN_DATE);
+        Double high = todaysContent.getAsDouble(WeatherContract.WeatherEntry.COLUMN_MAX_TEMP);
+        Double low = todaysContent.getAsDouble(WeatherContract.WeatherEntry.COLUMN_MIN_TEMP);
+        Log.d(TAG, "For date: " + new Date(date) + " has a high of: " + high + " and low of: " + low);
     }
 
     private void updateWidgets() {
