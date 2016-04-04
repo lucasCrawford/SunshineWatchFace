@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.util.Log;
 
 import com.example.hercules.wearable.utils.Constants;
+import com.google.android.gms.wearable.Asset;
 import com.google.android.gms.wearable.DataEvent;
 import com.google.android.gms.wearable.DataEventBuffer;
 import com.google.android.gms.wearable.DataItem;
@@ -17,7 +18,6 @@ import com.google.android.gms.wearable.WearableListenerService;
 public class WeatherUpdateService extends WearableListenerService {
 
     private static final String TAG = "WeatherUpdateService";
-
 
     @Override
     public void onCreate() {
@@ -38,17 +38,24 @@ public class WeatherUpdateService extends WearableListenerService {
 
                 /* If the path of the data event is for a weather update, send broadcast */
                 if(path.equals(Constants.PATH)){
-                    sendWeatherUpdateBroadcast(dataMap.getFloat(Constants.DATA_HIGH_TEMP), dataMap.getFloat(Constants.DATA_LOW_TEMP));
+                    sendWeatherUpdateBroadcast(dataMap);
                 }
           }
         }
     }
 
     /* Update the watch face with the weather update details */
-    private void sendWeatherUpdateBroadcast(Float high, Float low){
+    private void sendWeatherUpdateBroadcast(DataMap dataMap){
         Intent intent = new Intent();
-        intent.putExtra(Constants.DATA_HIGH_TEMP, high);
-        intent.putExtra(Constants.DATA_LOW_TEMP, low);
+        intent.putExtra(Constants.DATA_HIGH_TEMP,
+                dataMap.getFloat(Constants.DATA_HIGH_TEMP));
+        intent.putExtra(Constants.DATA_LOW_TEMP,
+                dataMap.getFloat(Constants.DATA_LOW_TEMP));
+        intent.putExtra(Constants.DATA_ICON,
+                dataMap.getAsset(Constants.DATA_ICON));
+        intent.putExtra(Constants.DATA_WEATHER_ID,
+                dataMap.getInt(Constants.DATA_WEATHER_ID));
+
         intent.setAction(Constants.WEATHER_UPDATE);
         sendBroadcast(intent);
     }

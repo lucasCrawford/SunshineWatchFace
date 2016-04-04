@@ -61,9 +61,7 @@ import com.google.android.gms.wearable.Wearable;
  */
 public class ForecastFragment extends Fragment implements
         LoaderManager.LoaderCallbacks<Cursor>,
-        SharedPreferences.OnSharedPreferenceChangeListener,
-        GoogleApiClient.ConnectionCallbacks,
-        GoogleApiClient.OnConnectionFailedListener{
+        SharedPreferences.OnSharedPreferenceChangeListener{
     public static final String LOG_TAG = ForecastFragment.class.getSimpleName();
     private ForecastAdapter mForecastAdapter;
     private RecyclerView mRecyclerView;
@@ -71,7 +69,6 @@ public class ForecastFragment extends Fragment implements
     private int mChoiceMode;
     private boolean mHoldForTransition;
     private long mInitialSelectedDate = -1;
-    private GoogleApiClient mGoogleApiClient;
 
     private static final String TAG = "ForecastFragment";
 
@@ -130,19 +127,6 @@ public class ForecastFragment extends Fragment implements
         super.onCreate(savedInstanceState);
         // Add this line in order for this fragment to handle menu events.
         setHasOptionsMenu(true);
-
-        /* Initialize the Google Api client */
-        initApiClient();
-    }
-
-
-    private void initApiClient(){
-        mGoogleApiClient = new GoogleApiClient.Builder(getActivity())
-                .addApi(Wearable.API)
-                .addConnectionCallbacks(this)
-                .addOnConnectionFailedListener(this)
-                .build();
-        mGoogleApiClient.connect();
     }
 
     @Override
@@ -367,7 +351,6 @@ public class ForecastFragment extends Fragment implements
                     if (mRecyclerView.getChildCount() > 0) {
                         mRecyclerView.getViewTreeObserver().removeOnPreDrawListener(this);
                         int position = mForecastAdapter.getSelectedItemPosition();
-                        sendWeatherData(25.0, 12.0);
                         if (position == RecyclerView.NO_POSITION &&
                                 -1 != mInitialSelectedDate) {
                             Cursor data = mForecastAdapter.getCursor();
@@ -426,41 +409,6 @@ public class ForecastFragment extends Fragment implements
 
     public void setInitialSelectedDate(long initialSelectedDate) {
         mInitialSelectedDate = initialSelectedDate;
-    }
-
-    @Override
-    public void onConnected(Bundle bundle) {
-        Log.d(TAG, "Connected to GPS!");
-    }
-
-    @Override
-    public void onConnectionSuspended(int i) {
-        Log.d(TAG, "Connection suspended...!");
-    }
-
-    @Override
-    public void onConnectionFailed(ConnectionResult connectionResult) {
-        Log.d(TAG, "Connection failed");
-    }
-
-    public void sendWeatherData(Double high, Double low){
-        Log.d(TAG, "Sending demo data!");
-        PutDataMapRequest putDataMapRequest = PutDataMapRequest.create(Constants.PATH);
-
-        DataMap map = putDataMapRequest.getDataMap();
-        map.putLong("timestamp", System.currentTimeMillis());
-        map.putLong(Constants.DATA_DATE, System.currentTimeMillis());
-        map.putDouble(Constants.DATA_HIGH_TEMP, high);
-        map.putDouble(Constants.DATA_LOW_TEMP, low);
-
-        PutDataRequest request = putDataMapRequest.asPutDataRequest();
-        Wearable.DataApi.putDataItem(mGoogleApiClient, request)
-                .setResultCallback(new ResultCallback<DataApi.DataItemResult>() {
-                    @Override
-                    public void onResult(DataApi.DataItemResult dataItemResult) {
-                        Log.d(TAG, "Result: " + dataItemResult);
-                    }
-                });
     }
 
     /*

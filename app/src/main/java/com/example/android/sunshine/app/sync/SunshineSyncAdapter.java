@@ -36,6 +36,9 @@ import com.example.android.sunshine.app.R;
 import com.example.android.sunshine.app.Utility;
 import com.example.android.sunshine.app.data.WeatherContract;
 import com.example.android.sunshine.app.muzei.WeatherMuzeiSource;
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.wearable.Wearable;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -49,11 +52,14 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.Date;
 import java.util.Vector;
 import java.util.concurrent.ExecutionException;
 
-public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter {
+public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter implements
+        GoogleApiClient.ConnectionCallbacks,
+        GoogleApiClient.OnConnectionFailedListener {
+
+    private GoogleApiClient mGoogleApiClient;
     public final String LOG_TAG = SunshineSyncAdapter.class.getSimpleName();
     public static final String ACTION_DATA_UPDATED =
             "com.example.android.sunshine.app.ACTION_DATA_UPDATED";
@@ -95,6 +101,9 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter {
     @Override
     public void onPerformSync(Account account, Bundle extras, String authority, ContentProviderClient provider, SyncResult syncResult) {
         Log.d(LOG_TAG, "Starting sync");
+
+        /* Initialize the Google Api client */
+        initApiClient();
 
         // We no longer need just the location String, but also potentially the latitude and
         // longitude, in case we are syncing based on a new Place Picker API result.
@@ -360,8 +369,6 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter {
             if ( cVVector.size() > 0 ) {
                 ContentValues[] cvArray = new ContentValues[cVVector.size()];
                 cVVector.toArray(cvArray);
-                ContentValues todaysContent = cVVector.get(0);
-                sendDataToWatchface(todaysContent);
                 getContext().getContentResolver().bulkInsert(WeatherContract.WeatherEntry.CONTENT_URI, cvArray);
 
                 // delete old data so we don't build up an endless history
@@ -372,9 +379,14 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter {
                 updateWidgets();
                 updateMuzei();
                 notifyWeather();
+
+                /* Send the update to the wearable watchface via DataApi */
+                ContentValues todaysContent = cVVector.get(0);
+                WearableUtils.sendDataToWatchface(context, mGoogleApiClient, todaysContent);
             }
             Log.d(LOG_TAG, "Sync Complete. " + cVVector.size() + " Inserted");
             setLocationStatus(getContext(), LOCATION_STATUS_OK);
+            killApiClient();
 
         } catch (JSONException e) {
             Log.e(LOG_TAG, e.getMessage(), e);
@@ -383,12 +395,25 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter {
         }
     }
 
-    private void sendDataToWatchface(ContentValues todaysContent){
-        Log.d(TAG, "Sending data!");
-        Long date = todaysContent.getAsLong(WeatherContract.WeatherEntry.COLUMN_DATE);
-        Double high = todaysContent.getAsDouble(WeatherContract.WeatherEntry.COLUMN_MAX_TEMP);
-        Double low = todaysContent.getAsDouble(WeatherContract.WeatherEntry.COLUMN_MIN_TEMP);
-        Log.d(TAG, "For date: " + new Date(date) + " has a high of: " + high + " and low of: " + low);
+    /**
+     * Create GoogleApiClient and connect it
+     */
+    private void initApiClient(){
+        mGoogleApiClient = new GoogleApiClient.Builder(getContext())
+                .addApi(Wearable.API)
+                .addConnectionCallbacks(this)
+                .addOnConnectionFailedListener(this)
+                .build();
+        mGoogleApiClient.connect();
+    }
+
+    /**
+     * Kill the API client and disconnect it
+     */
+    private void killApiClient(){
+        if(mGoogleApiClient != null){
+            mGoogleApiClient.disconnect();
+        }
     }
 
     private void updateWidgets() {
@@ -669,4 +694,21 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter {
         spe.putInt(c.getString(R.string.pref_location_status_key), locationStatus);
         spe.commit();
     }
+
+    @Override
+    public void onConnected(Bundle bundle) {
+        Log.d(TAG, "Connected to GooglePlayServices!");
+    }
+
+    @Override
+    public void onConnectionSuspended(int i) {
+        Log.d(TAG, "Connection suspended...!");
+    }
+
+    @Override
+    public void onConnectionFailed(ConnectionResult connectionResult) {
+        Log.d(TAG, "Connection failed");
+    }
+
+
 }
