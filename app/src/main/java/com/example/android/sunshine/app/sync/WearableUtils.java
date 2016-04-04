@@ -33,15 +33,16 @@ public class WearableUtils {
      * @param todaysContent
      */
     public static void sendDataToWatchface(Context context, GoogleApiClient apiClient, ContentValues todaysContent){
-        Log.d(TAG, "Sending data!");
 
         /* Access today's data */
         long date = todaysContent.getAsLong(WeatherContract.WeatherEntry.COLUMN_DATE);
         Double high = todaysContent.getAsDouble(WeatherContract.WeatherEntry.COLUMN_MAX_TEMP);
         Double low = todaysContent.getAsDouble(WeatherContract.WeatherEntry.COLUMN_MIN_TEMP);
-        int weatherId = todaysContent.getAsInteger(WeatherContract.WeatherEntry.COLUMN_WEATHER_ID);
 
-        Log.d(TAG, "WEather ID: " + weatherId);
+        /* Get the weather id and art resource. Then resize the bitmap here in the phone than
+         * handing the work off to the wearable.
+         */
+        int weatherId = todaysContent.getAsInteger(WeatherContract.WeatherEntry.COLUMN_WEATHER_ID);
         int artResource = Utility.getArtResourceForWeatherCondition(weatherId);
         Bitmap icon = BitmapFactory.decodeResource(context.getResources(), artResource);
         Integer iconSize = context.getResources().getDimensionPixelSize(R.dimen.weather_icon_size);
@@ -50,8 +51,8 @@ public class WearableUtils {
         PutDataMapRequest putDataMapRequest = PutDataMapRequest.create(Constants.PATH);
         DataMap map = putDataMapRequest.getDataMap();
 
-        //TODO: Remove this. Using a timestamp is for debugging. In production, you only send the date so it doesn't send more data if it doesn't have to
-        map.putLong("timestamp", System.currentTimeMillis());
+        // Uncomment this to enable debugging. Without this, only updates with changes are actually received by the wearable.
+    //    map.putLong("timestamp", System.currentTimeMillis());
 
         /* Attach today's data for the weather */
         map.putLong(Constants.DATA_DATE, date);

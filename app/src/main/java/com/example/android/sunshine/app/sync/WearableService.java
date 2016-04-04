@@ -80,6 +80,7 @@ public class WearableService extends WearableListenerService implements
                 /* Close cursor if necessary */
                 if(cursor != null){
                     cursor.close();
+                    killApiClient();
                 }
 
             }else{

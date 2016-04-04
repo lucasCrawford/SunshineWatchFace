@@ -146,9 +146,9 @@ public class WeatherWatchFace extends CanvasWatchFaceService{
         private String mCurrentHigh;
         private String mCurrentLow;
 
-        private float mXOffset;
-        private float mYOffset;
         private float mLineHeight;
+        private float mItemSpacing;
+        private float mSmallLineHeight;
         private float mSeparatorWidth;
 
         /* Icon shown on watch face */
@@ -171,11 +171,9 @@ public class WeatherWatchFace extends CanvasWatchFaceService{
         final WeatherUpdateReceiver mWeatherUpdateReceiver = new WeatherUpdateReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
-                Log.e(TAG, "Received weather update!");
                 Float high = intent.getFloatExtra(Constants.DATA_HIGH_TEMP, 0);
                 Float low = intent.getFloatExtra(Constants.DATA_LOW_TEMP, 0);
                 Integer weatherId = intent.getIntExtra(Constants.DATA_WEATHER_ID, -1);
-                Log.e(TAG, "Weather ID: " + weatherId);
                 Long date = intent.getLongExtra(Constants.DATA_DATE, System.currentTimeMillis());
                 Asset icon = intent.getParcelableExtra(Constants.DATA_ICON);
                 Resources resources = getResources();
@@ -187,12 +185,8 @@ public class WeatherWatchFace extends CanvasWatchFaceService{
                 LoadBitmapTask task = new LoadBitmapTask(mGoogleApiClient, new LoadBitmapTask.OnBitmapLoadedCallback() {
                     @Override
                     public void onBitmapLoaded(Bitmap bitmap) {
-                        Log.e(TAG, "Bitmap ready!");
                         if(mWeatherIcon != null){
                             mWeatherIcon = bitmap;
-                            Log.e(TAG, "Bitmap not null.");
-                        }else{
-                            Log.e(TAG, "Bitmap null!");
                         }
                         invalidate();
                     }
@@ -234,12 +228,32 @@ public class WeatherWatchFace extends CanvasWatchFaceService{
         }
 
         /**
+         * Initialize the fields that are shown as watchface components.
+         * @param resources
+         */
+        private void initFields(Resources resources){
+
+            /* Init the displayed fields, pulling previous data as default from the cache. */
+            DataCache cache = DataCache.getCache(WeatherWatchFace.this);
+            mCurrentDate = TextFormatter.formatDate(new Date());
+            mCurrentHigh = TextFormatter.formatTemperature(resources, cache.getFloat(Constants.DATA_HIGH_TEMP));
+            mCurrentLow = TextFormatter.formatTemperature(resources, cache.getFloat(Constants.DATA_LOW_TEMP));
+
+            /* Request data from the phone every time the watchface is first displayed (stay consistent)  */
+            //TODO: Can be optimized so it syncs less often then every time it's created?
+            initDefaultWeatherIcon();
+            requestData();
+            mTime = new Time();
+        }
+
+        /**
          * Initialize all the dimensional fields used to position components
          * @param resources
          */
         private void initDimens(Resources resources){
-            mYOffset = resources.getDimension(R.dimen.digital_y_offset);
             mLineHeight = resources.getDimension(R.dimen.digital_line_height);
+            mItemSpacing = mLineHeight / 2;
+            mSmallLineHeight = mLineHeight / 3;
             mSeparatorWidth = resources.getDimension(R.dimen.separator_width);
             mWeatherIconSize = resources.getDimensionPixelSize(R.dimen.weather_icon_size);
         }
@@ -311,25 +325,6 @@ public class WeatherWatchFace extends CanvasWatchFaceService{
         }
 
         /**
-         * Initialize the fields that are shown as watchface components.
-         * @param resources
-         */
-        private void initFields(Resources resources){
-
-            /* Init the displayed fields, pulling previous data as default from the cache. */
-            DataCache cache = DataCache.getCache(WeatherWatchFace.this);
-            mCurrentDate = TextFormatter.formatDate(new Date());
-            mCurrentHigh = TextFormatter.formatTemperature(resources, cache.getFloat(Constants.DATA_HIGH_TEMP));
-            mCurrentLow = TextFormatter.formatTemperature(resources, cache.getFloat(Constants.DATA_LOW_TEMP));
-
-            /* Request data from the phone every time the watchface is first displayed (stay consistent)  */
-            //TODO: Can be optimized so it syncs less often then every time it's created?
-            initDefaultWeatherIcon();
-            requestData();
-            mTime = new Time();
-        }
-
-        /**
          * Request the weather data if there is no cached data for today.
          */
         private void requestData(){
@@ -341,10 +336,12 @@ public class WeatherWatchFace extends CanvasWatchFaceService{
                                 new byte[0]).setResultCallback(new ResultCallback<MessageApi.SendMessageResult>() {
                             @Override
                             public void onResult(MessageApi.SendMessageResult sendMessageResult) {
-                                if (!sendMessageResult.getStatus().isSuccess()) {
-                                    Log.e(TAG, "Failed to send successful message request for weather!");
-                                }else{
-                                    Log.d(TAG, "Successfully sent message to connect node: " + n.getDisplayName());
+                                if (Log.isLoggable(TAG, Log.DEBUG)) {
+                                    if (!sendMessageResult.getStatus().isSuccess()) {
+                                        Log.d(TAG, "Failed to send successful message request for weather!");
+                                    } else {
+                                        Log.d(TAG, "Successfully sent message to connect node: " + n.getDisplayName());
+                                    }
                                 }
                             }
                         });
@@ -386,8 +383,6 @@ public class WeatherWatchFace extends CanvasWatchFaceService{
             // Load resources that have alternate values for round watches.
             Resources resources = WeatherWatchFace.this.getResources();
             boolean isRound = insets.isRound();
-            mXOffset = resources.getDimension(isRound
-                    ? R.dimen.digital_x_offset_round : R.dimen.digital_x_offset);
             float textSize = resources.getDimension(isRound
                     ? R.dimen.digital_text_size_round : R.dimen.digital_text_size);
             float dateTextSize = resources.getDimension(isRound
@@ -417,6 +412,9 @@ public class WeatherWatchFace extends CanvasWatchFaceService{
             updateTimer();
         }
 
+        /*
+            TODO: Optimize this so it isn't doing so much math in onDraw
+         */
         @Override
         public void onDraw(Canvas canvas, Rect bounds) {
             mTime.setToNow();
@@ -428,15 +426,18 @@ public class WeatherWatchFace extends CanvasWatchFaceService{
                 canvas.drawRect(0, 0, canvas.getWidth(), canvas.getHeight(), mBackgroundPaint);
             }
 
+            // Format the time.
             String timeFormatted =
                     TextFormatter.formatTwoDigitNumber(mTime.hour)
                     + COLON
                     + TextFormatter.formatTwoDigitNumber(mTime.minute);
 
+            /* Get initial positions based on size of the screen */
             int xPos = (canvas.getWidth() / 2);
             int yPos = (int) ((canvas.getHeight() / 2) - ((mTimePaint.descent() + mTimePaint.ascent()) / 2)) ;
             yPos -= mLineHeight * 2;
 
+            /* Calculate the time and date x-pos */
             int timeX = xPos - (int) (mTimePaint.measureText(timeFormatted) / 2);
             int dateX = xPos - (int) (mDatePaint.measureText(mCurrentDate)) / 2;
 
@@ -444,21 +445,21 @@ public class WeatherWatchFace extends CanvasWatchFaceService{
             canvas.drawText(timeFormatted, timeX, yPos, mTimePaint);
 
             // Draw the date
-            yPos += (mLineHeight / 2) - ((mDatePaint.descent() + mDatePaint.ascent()) / 2);
+            yPos += mItemSpacing - ((mDatePaint.descent() + mDatePaint.ascent()) / 2);
             canvas.drawText(mCurrentDate, dateX, yPos, mDatePaint);
 
             // Draw the separator
-            yPos += (mLineHeight / 2);
+            yPos += mItemSpacing;
             int lineX = xPos - (int) ((3*mSeparatorWidth)/4);
             canvas.drawLine(lineX, yPos, lineX + mTempPaint.measureText(mCurrentHigh), yPos, mSeparatorPaint);
 
             // Draw the high-temp
-            yPos += (mLineHeight / 2) - ((mTempPaint.descent() + mTempPaint.ascent()) / 2);
-            canvas.drawText(mCurrentHigh, xPos - (int) (mTempPaint.measureText(mCurrentHigh) / 2), yPos + mLineHeight / 3, mTempPaint);
+            yPos += mItemSpacing - ((mTempPaint.descent() + mTempPaint.ascent()) / 2);
+            canvas.drawText(mCurrentHigh, xPos - (int) (mTempPaint.measureText(mCurrentHigh) / 2), yPos + mSmallLineHeight, mTempPaint);
 
             // Draw the low-temp
-            int xPosLowTemp = xPos + (int) (mLineHeight / 3);
-            canvas.drawText(mCurrentLow, xPosLowTemp + (int) (mTempLowPaint.measureText(mCurrentLow) / 2), yPos + mLineHeight / 3, mTempLowPaint);
+            int xPosLowTemp = xPos + (int) (mSmallLineHeight);
+            canvas.drawText(mCurrentLow, xPosLowTemp + (int) (mTempLowPaint.measureText(mCurrentLow) / 2), yPos + mSmallLineHeight, mTempLowPaint);
 
             // Draw the bitmap
             int xPosBitmap = xPos - (int) (3*mLineHeight/4) - mWeatherIcon.getWidth();
@@ -487,14 +488,12 @@ public class WeatherWatchFace extends CanvasWatchFaceService{
             super.onVisibilityChanged(visible);
 
             if (visible) {
-                Log.e(TAG, "Visible");
                 registerReceivers();
 
                 // Update time zone in case it changed while we weren't visible.
                 mTime.clear(TimeZone.getDefault().getID());
                 mTime.setToNow();
             } else {
-                Log.e(TAG, "Invisible");
                 unregisterReceivers();
             }
 
@@ -516,7 +515,6 @@ public class WeatherWatchFace extends CanvasWatchFaceService{
             if(weatherIcon == -1){
                 weatherIcon = R.mipmap.art_clear;
             }
-            Log.d(TAG, "Weather id:" + weatherId);
             mWeatherIcon = BitmapFactory.decodeResource(getResources(), weatherIcon, options);
             mWeatherIcon = Bitmap.createScaledBitmap(mWeatherIcon, mWeatherIconSize, mWeatherIconSize, false);
         }
@@ -607,17 +605,23 @@ public class WeatherWatchFace extends CanvasWatchFaceService{
 
         @Override
         public void onConnected(Bundle bundle) {
-            Log.d(TAG, "Connected to GooglePlayServices!");
+            if (Log.isLoggable(TAG, Log.DEBUG)) {
+                Log.d(TAG, "Connected to GooglePlayServices!");
+            }
         }
 
         @Override
         public void onConnectionSuspended(int i) {
-            Log.d(TAG, "Connection suspended...!");
+            if (Log.isLoggable(TAG, Log.DEBUG)) {
+                Log.d(TAG, "Connection suspended...!");
+            }
         }
 
         @Override
         public void onConnectionFailed(ConnectionResult connectionResult) {
-            Log.d(TAG, "Connection failed");
+            if (Log.isLoggable(TAG, Log.DEBUG)) {
+                Log.d(TAG, "Connection failed");
+            }
         }
     }
 

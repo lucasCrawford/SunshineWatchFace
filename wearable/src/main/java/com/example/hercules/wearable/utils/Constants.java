@@ -12,6 +12,8 @@ public class Constants {
     public static final String DATA_DATE = "DATA_DATE";
     public static final String DATA_ICON = "DATA_ICON";
     public static final String DATA_WEATHER_ID = "DATA_WEATHER_ID";
+
+    //TODO: Use this to optimize only synching with phone every so often opening watchface (1 hour?)
     public static final String DATA_LAST_UPDATE = "LAST_UPDATE";
 
     /* Custom broadcast receiver to update the wearable's data */

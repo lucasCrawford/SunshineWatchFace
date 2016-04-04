@@ -696,19 +696,13 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter implements
     }
 
     @Override
-    public void onConnected(Bundle bundle) {
-        Log.d(TAG, "Connected to GooglePlayServices!");
-    }
+    public void onConnected(Bundle bundle) {}
 
     @Override
-    public void onConnectionSuspended(int i) {
-        Log.d(TAG, "Connection suspended...!");
-    }
+    public void onConnectionSuspended(int i) {}
 
     @Override
-    public void onConnectionFailed(ConnectionResult connectionResult) {
-        Log.d(TAG, "Connection failed");
-    }
+    public void onConnectionFailed(ConnectionResult connectionResult) {}
 
 
 }
