@@ -1,4 +1,10 @@
-Advanced Android Sample App
+
+Sunshine Watchface
+===================================
+The project description below represents the code from the Udacity Android nanodegree course. I included my own code that creates an associated watch face for Android Wearable devices. 
+
+
+Advanced Android Sample App (Original)
 ===================================
 
 Synchronizes weather information from OpenWeatherMap on Android Phones and Tablets. Used in the Udacity Advanced Android course.
